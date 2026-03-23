@@ -6,12 +6,17 @@ import { Button } from '../ui/Button'
 import { useBudgetStore } from '../../store/budgetStore'
 import { useCategoryStore } from '../../store/categoryStore'
 import { formatCents, dollarsToCents, centsToDollars } from '../../lib/utils'
-import type { BudgetPeriod } from '../../types'
+import type { BudgetPeriod, BudgetType } from '../../types'
 
 const PERIODS: { value: BudgetPeriod; label: string }[] = [
   { value: 'weekly', label: 'Weekly' },
   { value: 'monthly', label: 'Monthly' },
   { value: 'yearly', label: 'Yearly' },
+]
+
+const TYPES: { value: BudgetType; label: string }[] = [
+  { value: 'fixed', label: 'Fixed' },
+  { value: 'variable', label: 'Variable' },
 ]
 
 export function BudgetEditor() {
@@ -27,6 +32,7 @@ export function BudgetEditor() {
   const [categoryId, setCategoryId] = useState<string>('')
   const [amount, setAmount] = useState('')
   const [period, setPeriod] = useState<BudgetPeriod>('monthly')
+  const [budgetType, setBudgetType] = useState<BudgetType>('fixed')
 
   const budgetedCategoryIds = new Set(budgets.map((b) => b.category_id))
   const availableCategories = categories.filter(
@@ -39,6 +45,7 @@ export function BudgetEditor() {
     setCategoryId('')
     setAmount('')
     setPeriod('monthly')
+    setBudgetType('fixed')
   }
 
   const handleAdd = async () => {
@@ -50,6 +57,7 @@ export function BudgetEditor() {
         category_id: Number(categoryId),
         amount_cents: dollarsToCents(parsed),
         period,
+        type: budgetType,
       })
       cancelEdit()
       toast.success('Budget added')
@@ -66,6 +74,7 @@ export function BudgetEditor() {
       await updateBudget(id, {
         amount_cents: dollarsToCents(parsed),
         period,
+        type: budgetType,
       })
       cancelEdit()
       toast.success('Budget updated')
@@ -142,6 +151,19 @@ export function BudgetEditor() {
                 ))}
               </select>
             </div>
+            <div className="w-28">
+              <label className="mb-1 block text-[11px] font-medium" style={{ color: 'var(--text-secondary)' }}>Type</label>
+              <select
+                value={budgetType}
+                onChange={(e) => setBudgetType(e.target.value as BudgetType)}
+                className="w-full rounded border px-2 py-1.5 text-sm outline-none focus:border-accent"
+                style={{ backgroundColor: 'var(--bg-primary)' }}
+              >
+                {TYPES.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </div>
             <div className="flex gap-1">
               <button onClick={handleAdd} className="rounded p-1.5 text-emerald-500 hover:bg-emerald-500/10">
                 <Check size={16} />
@@ -153,87 +175,117 @@ export function BudgetEditor() {
           </div>
         )}
 
-        {budgets.map((budget) =>
-          editingId === budget.id ? (
-            <div key={budget.id} className="flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-end" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-              <div className="flex-1">
-                <label className="mb-1 block text-[11px] font-medium" style={{ color: 'var(--text-secondary)' }}>Category</label>
-                <input
-                  value={budget.category.name}
-                  disabled
-                  className="w-full rounded border px-2 py-1.5 text-sm opacity-50"
-                  style={{ backgroundColor: 'var(--bg-primary)' }}
-                />
-              </div>
-              <div className="w-24">
-                <label className="mb-1 block text-[11px] font-medium" style={{ color: 'var(--text-secondary)' }}>Amount</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="w-full rounded border px-2 py-1.5 text-sm outline-none focus:border-accent"
-                  style={{ backgroundColor: 'var(--bg-primary)' }}
-                  autoFocus
-                />
-              </div>
-              <div className="w-28">
-                <label className="mb-1 block text-[11px] font-medium" style={{ color: 'var(--text-secondary)' }}>Period</label>
-                <select
-                  value={period}
-                  onChange={(e) => setPeriod(e.target.value as BudgetPeriod)}
-                  className="w-full rounded border px-2 py-1.5 text-sm outline-none focus:border-accent"
-                  style={{ backgroundColor: 'var(--bg-primary)' }}
-                >
-                  {PERIODS.map((p) => (
-                    <option key={p.value} value={p.value}>{p.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex gap-1">
-                <button onClick={() => handleSaveEdit(budget.id)} className="rounded p-1.5 text-emerald-500 hover:bg-emerald-500/10">
-                  <Check size={16} />
-                </button>
-                <button onClick={cancelEdit} className="rounded p-1.5 text-[var(--text-tertiary)] hover:bg-[var(--bg-tertiary)]">
-                  <X size={16} />
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div
-              key={budget.id}
-              className="flex items-center justify-between rounded-lg border px-3 py-2"
-            >
-              <div>
-                <span className="text-sm font-medium">{budget.category.name}</span>
-                <span className="ml-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
-                  {formatCents(budget.amount_cents)}
+        {(['fixed', 'variable'] as BudgetType[]).map((section) => {
+          const sectionBudgets = budgets.filter((b) => b.type === section)
+          if (sectionBudgets.length === 0) return null
+          return (
+            <div key={section}>
+              <div className="flex items-center gap-3 py-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-tertiary)' }}>
+                  {section === 'fixed' ? 'Fixed Expenses' : 'Variable Expenses'}
                 </span>
-                <span className="ml-2 rounded px-1.5 py-0.5 text-[10px] font-medium" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
-                  {budget.period}
-                </span>
+                <div className="h-px flex-1" style={{ backgroundColor: 'var(--border-primary)' }} />
               </div>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => {
-                    setEditingId(budget.id)
-                    setAmount(centsToDollars(budget.amount_cents).toString())
-                    setPeriod(budget.period)
-                  }}
-                  className="rounded p-1 text-[var(--text-tertiary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
-                >
-                  <Pencil size={13} />
-                </button>
-                <button
-                  onClick={() => handleDelete(budget.id)}
-                  className="rounded p-1 text-[var(--text-tertiary)] hover:bg-red-500/10 hover:text-red-500"
-                >
-                  <Trash2 size={13} />
-                </button>
+              <div className="space-y-2">
+                {sectionBudgets.map((budget) =>
+                  editingId === budget.id ? (
+                    <div key={budget.id} className="flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-end" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                      <div className="flex-1">
+                        <label className="mb-1 block text-[11px] font-medium" style={{ color: 'var(--text-secondary)' }}>Category</label>
+                        <input
+                          value={budget.category.name}
+                          disabled
+                          className="w-full rounded border px-2 py-1.5 text-sm opacity-50"
+                          style={{ backgroundColor: 'var(--bg-primary)' }}
+                        />
+                      </div>
+                      <div className="w-24">
+                        <label className="mb-1 block text-[11px] font-medium" style={{ color: 'var(--text-secondary)' }}>Amount</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={amount}
+                          onChange={(e) => setAmount(e.target.value)}
+                          className="w-full rounded border px-2 py-1.5 text-sm outline-none focus:border-accent"
+                          style={{ backgroundColor: 'var(--bg-primary)' }}
+                          autoFocus
+                        />
+                      </div>
+                      <div className="w-28">
+                        <label className="mb-1 block text-[11px] font-medium" style={{ color: 'var(--text-secondary)' }}>Period</label>
+                        <select
+                          value={period}
+                          onChange={(e) => setPeriod(e.target.value as BudgetPeriod)}
+                          className="w-full rounded border px-2 py-1.5 text-sm outline-none focus:border-accent"
+                          style={{ backgroundColor: 'var(--bg-primary)' }}
+                        >
+                          {PERIODS.map((p) => (
+                            <option key={p.value} value={p.value}>{p.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="w-28">
+                        <label className="mb-1 block text-[11px] font-medium" style={{ color: 'var(--text-secondary)' }}>Type</label>
+                        <select
+                          value={budgetType}
+                          onChange={(e) => setBudgetType(e.target.value as BudgetType)}
+                          className="w-full rounded border px-2 py-1.5 text-sm outline-none focus:border-accent"
+                          style={{ backgroundColor: 'var(--bg-primary)' }}
+                        >
+                          {TYPES.map((t) => (
+                            <option key={t.value} value={t.value}>{t.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex gap-1">
+                        <button onClick={() => handleSaveEdit(budget.id)} className="rounded p-1.5 text-emerald-500 hover:bg-emerald-500/10">
+                          <Check size={16} />
+                        </button>
+                        <button onClick={cancelEdit} className="rounded p-1.5 text-[var(--text-tertiary)] hover:bg-[var(--bg-tertiary)]">
+                          <X size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      key={budget.id}
+                      className="flex items-center justify-between rounded-lg border px-3 py-2"
+                    >
+                      <div>
+                        <span className="text-sm font-medium">{budget.category.name}</span>
+                        <span className="ml-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                          {formatCents(budget.amount_cents)}
+                        </span>
+                        <span className="ml-2 rounded px-1.5 py-0.5 text-[10px] font-medium" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
+                          {budget.period}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => {
+                            setEditingId(budget.id)
+                            setAmount(centsToDollars(budget.amount_cents).toString())
+                            setPeriod(budget.period)
+                            setBudgetType(budget.type)
+                          }}
+                          className="rounded p-1 text-[var(--text-tertiary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(budget.id)}
+                          className="rounded p-1 text-[var(--text-tertiary)] hover:bg-red-500/10 hover:text-red-500"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  )
+                )}
               </div>
             </div>
           )
-        )}
+        })}
 
         {budgets.length === 0 && !adding && (
           <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>

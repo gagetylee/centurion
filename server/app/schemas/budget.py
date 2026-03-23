@@ -2,7 +2,7 @@ from datetime import date
 
 from pydantic import BaseModel, ConfigDict
 
-from app.models.enums import BudgetPeriod
+from app.models.enums import BudgetPeriod, BudgetType
 from app.schemas.category import CategoryRead
 
 
@@ -10,11 +10,13 @@ class BudgetCreate(BaseModel):
     category_id: int
     amount_cents: int
     period: BudgetPeriod = BudgetPeriod.monthly
+    type: BudgetType
 
 
 class BudgetUpdate(BaseModel):
     amount_cents: int | None = None
     period: BudgetPeriod | None = None
+    type: BudgetType | None = None
 
 
 class BudgetRead(BaseModel):
@@ -24,6 +26,7 @@ class BudgetRead(BaseModel):
     category_id: int
     amount_cents: int
     period: BudgetPeriod
+    type: BudgetType
     category: CategoryRead
 
 

@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.budget import Budget
-from app.models.enums import BudgetPeriod
+from app.models.enums import BudgetPeriod, BudgetType
 from app.models.transaction import Transaction
 from app.schemas.budget import BudgetCreate, BudgetUpdate
 
@@ -35,8 +35,11 @@ def get_budget(db: Session, budget_id: int) -> Budget:
     return budget
 
 
-def get_budgets(db: Session, skip: int = 0, limit: int = 100) -> list[Budget]:
-    return db.query(Budget).offset(skip).limit(limit).all()
+def get_budgets(db: Session, skip: int = 0, limit: int = 100, budget_type: BudgetType | None = None) -> list[Budget]:
+    q = db.query(Budget)
+    if budget_type is not None:
+        q = q.filter(Budget.type == budget_type)
+    return q.offset(skip).limit(limit).all()
 
 
 def create_budget(db: Session, data: BudgetCreate) -> Budget:

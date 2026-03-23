@@ -1,12 +1,12 @@
 import { create } from 'zustand'
-import type { Budget, BudgetCreate, BudgetUpdate, BudgetStatus } from '../types'
+import type { Budget, BudgetCreate, BudgetUpdate, BudgetStatus, BudgetType } from '../types'
 import { budgetsApi } from '../lib/api'
 
 interface BudgetStore {
   budgets: Budget[]
   budgetStatuses: Record<number, BudgetStatus>
   loading: boolean
-  fetchBudgets: () => Promise<void>
+  fetchBudgets: (type?: BudgetType) => Promise<void>
   fetchBudgetStatus: (budgetId: number) => Promise<void>
   fetchAllBudgetStatuses: () => Promise<void>
   createBudget: (data: BudgetCreate) => Promise<Budget>
@@ -19,10 +19,10 @@ export const useBudgetStore = create<BudgetStore>()((set, get) => ({
   budgetStatuses: {},
   loading: false,
 
-  fetchBudgets: async () => {
+  fetchBudgets: async (type?: BudgetType) => {
     set({ loading: true })
     try {
-      const budgets = await budgetsApi.list()
+      const budgets = await budgetsApi.list(0, 100, type)
       set({ budgets })
     } finally {
       set({ loading: false })

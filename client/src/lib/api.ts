@@ -2,7 +2,7 @@ import type {
   Account, AccountCreate, AccountUpdate,
   Category, CategoryCreate, CategoryUpdate,
   Transaction, TransactionCreate, TransactionUpdate,
-  Budget, BudgetCreate, BudgetUpdate, BudgetStatus,
+  Budget, BudgetCreate, BudgetUpdate, BudgetStatus, BudgetType,
 } from '../types'
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
@@ -91,8 +91,8 @@ export const transactionsApi = {
 
 // Budgets
 export const budgetsApi = {
-  list: (skip = 0, limit = 100) =>
-    request<Budget[]>(`/budgets${queryString({ skip, limit })}`),
+  list: (skip = 0, limit = 100, type?: BudgetType) =>
+    request<Budget[]>(`/budgets${queryString({ skip, limit, type })}`),
   get: (id: number) =>
     request<Budget>(`/budgets/${id}`),
   create: (data: BudgetCreate) =>

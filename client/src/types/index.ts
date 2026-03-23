@@ -2,6 +2,7 @@
 export type TransactionType = 'income' | 'expense'
 export type AccountType = 'checking' | 'savings' | 'credit_card' | 'cash' | 'investment'
 export type BudgetPeriod = 'weekly' | 'monthly' | 'yearly'
+export type BudgetType = 'fixed' | 'variable'
 
 // Read models (GET responses)
 export interface Account {
@@ -33,6 +34,7 @@ export interface Budget {
   category_id: number
   amount_cents: number
   period: BudgetPeriod
+  type: BudgetType
   category: Category
 }
 
@@ -68,6 +70,7 @@ export interface BudgetCreate {
   category_id: number
   amount_cents: number
   period?: BudgetPeriod
+  type: BudgetType
 }
 
 // Update payloads
@@ -93,6 +96,7 @@ export interface TransactionUpdate {
 export interface BudgetUpdate {
   amount_cents?: number
   period?: BudgetPeriod
+  type?: BudgetType
 }
 
 // UI-only types

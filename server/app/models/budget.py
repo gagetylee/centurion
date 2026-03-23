@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, ForeignKey, Enum, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from app.db.database import Base
-from app.models.enums import BudgetPeriod
+from app.models.enums import BudgetPeriod, BudgetType
 
 
 class Budget(Base):
@@ -12,5 +12,6 @@ class Budget(Base):
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=False, unique=True)
     amount_cents = Column(Integer, nullable=False)
     period = Column(Enum(BudgetPeriod), nullable=False, default=BudgetPeriod.monthly)
+    type = Column(Enum(BudgetType), nullable=False)
 
     category = relationship("Category", back_populates="budget")

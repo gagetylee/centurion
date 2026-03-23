@@ -18,3 +18,8 @@ class BudgetPeriod(str, enum.Enum):
     weekly = "weekly"
     monthly = "monthly"
     yearly = "yearly"
+
+
+class BudgetType(str, enum.Enum):
+    fixed = "fixed"
+    variable = "variable"

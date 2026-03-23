@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
+from app.models.enums import BudgetType
 from app.schemas.budget import BudgetCreate, BudgetRead, BudgetStatus, BudgetUpdate
 from app.services import budget as budget_service
 
@@ -14,8 +15,8 @@ def create_budget(data: BudgetCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/", response_model=list[BudgetRead])
-def list_budgets(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return budget_service.get_budgets(db, skip, limit)
+def list_budgets(skip: int = 0, limit: int = 100, type: BudgetType | None = None, db: Session = Depends(get_db)):
+    return budget_service.get_budgets(db, skip, limit, type)
 
 
 @router.get("/{budget_id}", response_model=BudgetRead)
