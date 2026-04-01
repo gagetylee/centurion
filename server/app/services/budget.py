@@ -5,9 +5,9 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models.budget import Budget
-from app.models.enums import BudgetPeriod, BudgetType
-from app.models.transaction import Transaction
+from app.db.models.budget import Budget
+from app.db.models.enums import BudgetPeriod, BudgetType
+from app.db.models.transaction import Transaction
 from app.schemas.budget import BudgetCreate, BudgetUpdate
 
 

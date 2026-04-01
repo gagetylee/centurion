@@ -1,14 +1,13 @@
 import { AccountEditor } from './AccountEditor'
 import { CategoryEditor } from './CategoryEditor'
 import { BudgetEditor } from './BudgetEditor'
-import { ThemeToggle } from '../layout/ThemeToggle'
 
 export function SettingsPage() {
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div>
         <h1 className="text-2xl font-bold">Settings</h1>
-        <ThemeToggle />
+        <p className="text-sm text-muted-foreground">Manage your accounts, categories, and budgets</p>
       </div>
 
       <AccountEditor />

@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 
-from app.models.enums import TransactionType
+from app.db.models.enums import TransactionType
 
 
 class CategoryCreate(BaseModel):

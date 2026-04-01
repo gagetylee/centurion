@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { Plus, Trash2, Pencil, Check, X } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { Card } from '../ui/Card'
-import { Button } from '../ui/Button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useBudgetStore } from '../../store/budgetStore'
 import { useCategoryStore } from '../../store/categoryStore'
 import { formatCents, dollarsToCents, centsToDollars } from '../../lib/utils'
@@ -95,37 +97,33 @@ export function BudgetEditor() {
 
   return (
     <Card>
-      <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>
-          Budgets
-        </h3>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-base">Budgets</CardTitle>
         <Button
           size="sm"
-          variant="secondary"
+          variant="outline"
           onClick={() => { cancelEdit(); setAdding(true) }}
           disabled={availableCategories.length === 0 && !adding}
         >
           <Plus size={14} /> Add
         </Button>
-      </div>
-
-      <div className="space-y-2">
+      </CardHeader>
+      <CardContent className="space-y-2">
         {adding && (
-          <div className="flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-end" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+          <div className="flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-end" className="bg-muted">
             <div className="flex-1">
               <label className="mb-1 block text-[11px] font-medium" style={{ color: 'var(--text-secondary)' }}>Category</label>
-              <select
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full rounded border px-2 py-1.5 text-sm outline-none focus:border-accent"
-                style={{ backgroundColor: 'var(--bg-primary)' }}
-                autoFocus
-              >
-                <option value="">Select...</option>
-                {availableCategories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+              <Select value={categoryId || '__placeholder__'} onValueChange={setCategoryId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__placeholder__" disabled>Select...</SelectItem>
+                  {availableCategories.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="w-24">
               <label className="mb-1 block text-[11px] font-medium" style={{ color: 'var(--text-secondary)' }}>Amount</label>
@@ -140,29 +138,29 @@ export function BudgetEditor() {
             </div>
             <div className="w-28">
               <label className="mb-1 block text-[11px] font-medium" style={{ color: 'var(--text-secondary)' }}>Period</label>
-              <select
-                value={period}
-                onChange={(e) => setPeriod(e.target.value as BudgetPeriod)}
-                className="w-full rounded border px-2 py-1.5 text-sm outline-none focus:border-accent"
-                style={{ backgroundColor: 'var(--bg-primary)' }}
-              >
-                {PERIODS.map((p) => (
-                  <option key={p.value} value={p.value}>{p.label}</option>
-                ))}
-              </select>
+              <Select value={period} onValueChange={(v) => setPeriod(v as BudgetPeriod)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {PERIODS.map((p) => (
+                    <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="w-28">
               <label className="mb-1 block text-[11px] font-medium" style={{ color: 'var(--text-secondary)' }}>Type</label>
-              <select
-                value={budgetType}
-                onChange={(e) => setBudgetType(e.target.value as BudgetType)}
-                className="w-full rounded border px-2 py-1.5 text-sm outline-none focus:border-accent"
-                style={{ backgroundColor: 'var(--bg-primary)' }}
-              >
-                {TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
-                ))}
-              </select>
+              <Select value={budgetType} onValueChange={(v) => setBudgetType(v as BudgetType)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {TYPES.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex gap-1">
               <button onClick={handleAdd} className="rounded p-1.5 text-emerald-500 hover:bg-emerald-500/10">
@@ -189,7 +187,7 @@ export function BudgetEditor() {
               <div className="space-y-2">
                 {sectionBudgets.map((budget) =>
                   editingId === budget.id ? (
-                    <div key={budget.id} className="flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-end" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                    <div key={budget.id} className="flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-end" className="bg-muted">
                       <div className="flex-1">
                         <label className="mb-1 block text-[11px] font-medium" style={{ color: 'var(--text-secondary)' }}>Category</label>
                         <input
@@ -213,29 +211,29 @@ export function BudgetEditor() {
                       </div>
                       <div className="w-28">
                         <label className="mb-1 block text-[11px] font-medium" style={{ color: 'var(--text-secondary)' }}>Period</label>
-                        <select
-                          value={period}
-                          onChange={(e) => setPeriod(e.target.value as BudgetPeriod)}
-                          className="w-full rounded border px-2 py-1.5 text-sm outline-none focus:border-accent"
-                          style={{ backgroundColor: 'var(--bg-primary)' }}
-                        >
-                          {PERIODS.map((p) => (
-                            <option key={p.value} value={p.value}>{p.label}</option>
-                          ))}
-                        </select>
+                        <Select value={period} onValueChange={(v) => setPeriod(v as BudgetPeriod)}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PERIODS.map((p) => (
+                              <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="w-28">
                         <label className="mb-1 block text-[11px] font-medium" style={{ color: 'var(--text-secondary)' }}>Type</label>
-                        <select
-                          value={budgetType}
-                          onChange={(e) => setBudgetType(e.target.value as BudgetType)}
-                          className="w-full rounded border px-2 py-1.5 text-sm outline-none focus:border-accent"
-                          style={{ backgroundColor: 'var(--bg-primary)' }}
-                        >
-                          {TYPES.map((t) => (
-                            <option key={t.value} value={t.value}>{t.label}</option>
-                          ))}
-                        </select>
+                        <Select value={budgetType} onValueChange={(v) => setBudgetType(v as BudgetType)}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TYPES.map((t) => (
+                              <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="flex gap-1">
                         <button onClick={() => handleSaveEdit(budget.id)} className="rounded p-1.5 text-emerald-500 hover:bg-emerald-500/10">
@@ -288,11 +286,11 @@ export function BudgetEditor() {
         })}
 
         {budgets.length === 0 && !adding && (
-          <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
+          <p className="text-sm text-muted-foreground">
             No budgets yet. Add expense categories first, then set budgets for them.
           </p>
         )}
-      </div>
+      </CardContent>
     </Card>
   )
 }

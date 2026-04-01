@@ -1,9 +1,9 @@
 """Seed script to create budget categories and monthly budgets from Gage's budget plan."""
 
 from app.db.database import SessionLocal
-from app.models.category import Category
-from app.models.budget import Budget
-from app.models.enums import TransactionType, BudgetPeriod, BudgetType
+from app.db.models.category import Category
+from app.db.models.budget import Budget
+from app.db.models.enums import TransactionType, BudgetPeriod, BudgetType
 
 
 CATEGORIES_AND_BUDGETS = [

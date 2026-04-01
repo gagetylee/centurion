@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String, Enum
 from sqlalchemy.orm import relationship
 
 from app.db.database import Base
-from app.models.enums import AccountType
+from app.db.models.enums import AccountType
 
 
 class Account(Base):

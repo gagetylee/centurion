@@ -1,12 +1,23 @@
 import { useState } from 'react'
 import { Pencil, Trash2, Check, X } from 'lucide-react'
 import toast from 'react-hot-toast'
-import type { Transaction } from '../../types'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { TableRow, TableCell } from '@/components/ui/table'
 import { useTransactionStore } from '../../store/transactionStore'
 import { useCategoryStore } from '../../store/categoryStore'
 import { useAccountStore } from '../../store/accountStore'
 import { useBudgetStore } from '../../store/budgetStore'
 import { formatCents, formatDate, dollarsToCents, centsToDollars } from '../../lib/utils'
+import type { Transaction } from '../../types'
 
 export function ExpenseRow({ transaction }: { transaction: Transaction }) {
   const updateTransaction = useTransactionStore((s) => s.updateTransaction)
@@ -16,13 +27,21 @@ export function ExpenseRow({ transaction }: { transaction: Transaction }) {
   const fetchAllBudgetStatuses = useBudgetStore((s) => s.fetchAllBudgetStatuses)
 
   const [editing, setEditing] = useState(false)
-  const [amount, setAmount] = useState(centsToDollars(transaction.amount_cents).toString())
-  const [categoryId, setCategoryId] = useState(transaction.category_id?.toString() ?? '')
-  const [accountId, setAccountId] = useState(transaction.account_id?.toString() ?? '')
+  const [amount, setAmount] = useState(
+    centsToDollars(transaction.amount_cents).toString()
+  )
+  const [categoryId, setCategoryId] = useState(
+    transaction.category_id?.toString() ?? '__none__'
+  )
+  const [accountId, setAccountId] = useState(
+    transaction.account_id?.toString() ?? '__none__'
+  )
   const [date, setDate] = useState(transaction.date)
   const [description, setDescription] = useState(transaction.description ?? '')
 
-  const filteredCategories = categories.filter((c) => c.type === transaction.type)
+  const filteredCategories = categories.filter(
+    (c) => c.type === transaction.type
+  )
 
   const handleSave = async () => {
     const parsed = parseFloat(amount)
@@ -33,8 +52,8 @@ export function ExpenseRow({ transaction }: { transaction: Transaction }) {
     try {
       await updateTransaction(transaction.id, {
         amount_cents: dollarsToCents(parsed),
-        category_id: categoryId ? Number(categoryId) : null,
-        account_id: accountId ? Number(accountId) : null,
+        category_id: categoryId !== '__none__' ? Number(categoryId) : null,
+        account_id: accountId !== '__none__' ? Number(accountId) : null,
         date,
         description: description.trim() || undefined,
       })
@@ -58,118 +77,132 @@ export function ExpenseRow({ transaction }: { transaction: Transaction }) {
 
   if (editing) {
     return (
-      <tr className="border-b">
-        <td className="px-3 py-2">
-          <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${
-            transaction.type === 'income' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'
-          }`}>
+      <TableRow>
+        <TableCell>
+          <Badge
+            variant={transaction.type === 'income' ? 'secondary' : 'destructive'}
+          >
             {transaction.type}
-          </span>
-        </td>
-        <td className="px-3 py-2">
-          <input
+          </Badge>
+        </TableCell>
+        <TableCell>
+          <Input
             type="number"
             step="0.01"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="w-20 rounded border px-2 py-1 text-sm outline-none focus:border-accent"
-            style={{ backgroundColor: 'var(--bg-secondary)' }}
+            className="w-24"
           />
-        </td>
-        <td className="px-3 py-2">
-          <select
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            className="rounded border px-2 py-1 text-sm outline-none focus:border-accent"
-            style={{ backgroundColor: 'var(--bg-secondary)' }}
-          >
-            <option value="">None</option>
-            {filteredCategories.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-        </td>
-        <td className="px-3 py-2">
-          <select
-            value={accountId}
-            onChange={(e) => setAccountId(e.target.value)}
-            className="rounded border px-2 py-1 text-sm outline-none focus:border-accent"
-            style={{ backgroundColor: 'var(--bg-secondary)' }}
-          >
-            <option value="">None</option>
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id}>{a.name}</option>
-            ))}
-          </select>
-        </td>
-        <td className="px-3 py-2">
-          <input
+        </TableCell>
+        <TableCell>
+          <Select value={categoryId} onValueChange={setCategoryId}>
+            <SelectTrigger size="sm">
+              <SelectValue placeholder="Select..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">None</SelectItem>
+              {filteredCategories.map((c) => (
+                <SelectItem key={c.id} value={String(c.id)}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </TableCell>
+        <TableCell>
+          <Select value={accountId} onValueChange={setAccountId}>
+            <SelectTrigger size="sm">
+              <SelectValue placeholder="Select..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">None</SelectItem>
+              {accounts.map((a) => (
+                <SelectItem key={a.id} value={String(a.id)}>
+                  {a.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </TableCell>
+        <TableCell>
+          <Input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="rounded border px-2 py-1 text-sm outline-none focus:border-accent"
-            style={{ backgroundColor: 'var(--bg-secondary)' }}
+            className="w-auto"
           />
-        </td>
-        <td className="px-3 py-2">
-          <input
+        </TableCell>
+        <TableCell>
+          <Input
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full rounded border px-2 py-1 text-sm outline-none focus:border-accent"
-            style={{ backgroundColor: 'var(--bg-secondary)' }}
           />
-        </td>
-        <td className="px-3 py-2">
+        </TableCell>
+        <TableCell>
           <div className="flex gap-1">
-            <button onClick={handleSave} className="rounded p-1 text-emerald-500 hover:bg-emerald-500/10">
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={handleSave}
+              className="text-emerald-500 hover:text-emerald-600"
+            >
               <Check size={14} />
-            </button>
-            <button onClick={() => setEditing(false)} className="rounded p-1 text-[var(--text-tertiary)] hover:bg-[var(--bg-tertiary)]">
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => setEditing(false)}
+            >
               <X size={14} />
-            </button>
+            </Button>
           </div>
-        </td>
-      </tr>
+        </TableCell>
+      </TableRow>
     )
   }
 
   return (
-    <tr className="border-b transition-colors hover:bg-[var(--bg-secondary)]">
-      <td className="px-3 py-2.5">
-        <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${
-          transaction.type === 'income' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'
-        }`}>
+    <TableRow>
+      <TableCell>
+        <Badge
+          variant={transaction.type === 'income' ? 'secondary' : 'destructive'}
+        >
           {transaction.type}
-        </span>
-      </td>
-      <td className="px-3 py-2.5 text-sm font-medium">{formatCents(transaction.amount_cents)}</td>
-      <td className="px-3 py-2.5 text-sm">{transaction.category?.name ?? '\u2014'}</td>
-      <td className="px-3 py-2.5 text-sm" style={{ color: 'var(--text-secondary)' }}>
+        </Badge>
+      </TableCell>
+      <TableCell className="font-medium">
+        {formatCents(transaction.amount_cents)}
+      </TableCell>
+      <TableCell>{transaction.category?.name ?? '\u2014'}</TableCell>
+      <TableCell className="text-muted-foreground">
         {transaction.account?.name ?? '\u2014'}
-      </td>
-      <td className="px-3 py-2.5 text-sm" style={{ color: 'var(--text-secondary)' }}>
+      </TableCell>
+      <TableCell className="text-muted-foreground">
         {formatDate(transaction.date)}
-      </td>
-      <td className="px-3 py-2.5 text-sm" style={{ color: 'var(--text-secondary)' }}>
+      </TableCell>
+      <TableCell className="text-muted-foreground">
         {transaction.description || '\u2014'}
-      </td>
-      <td className="px-3 py-2.5">
+      </TableCell>
+      <TableCell>
         <div className="flex gap-1">
-          <button
+          <Button
+            variant="ghost"
+            size="icon-xs"
             onClick={() => setEditing(true)}
-            className="rounded p-1 text-[var(--text-tertiary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
           >
             <Pencil size={14} />
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-xs"
             onClick={handleDelete}
-            className="rounded p-1 text-[var(--text-tertiary)] transition-colors hover:bg-red-500/10 hover:text-red-500"
+            className="hover:text-destructive"
           >
             <Trash2 size={14} />
-          </button>
+          </Button>
         </div>
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   )
 }

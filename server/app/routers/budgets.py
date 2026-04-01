@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.models.enums import BudgetType
+from app.db.models.enums import BudgetType
 from app.schemas.budget import BudgetCreate, BudgetRead, BudgetStatus, BudgetUpdate
 from app.services import budget as budget_service
 

@@ -3,8 +3,8 @@ from datetime import date
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.models.category import Category
-from app.models.transaction import Transaction
+from app.db.models.category import Category
+from app.db.models.transaction import Transaction
 from app.schemas.transaction import TransactionCreate, TransactionUpdate
 
 

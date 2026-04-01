@@ -2,7 +2,7 @@ import datetime
 
 from pydantic import BaseModel, ConfigDict
 
-from app.models.enums import TransactionType
+from app.db.models.enums import TransactionType
 from app.schemas.category import CategoryRead
 from app.schemas.account import AccountRead
 

@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { Plus, Trash2, Pencil, Check, X } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { Card } from '../ui/Card'
-import { Button } from '../ui/Button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useCategoryStore } from '../../store/categoryStore'
 import type { TransactionType } from '../../types'
 
@@ -56,36 +58,30 @@ export function CategoryEditor() {
   }
 
   const renderEditRow = (onSave: () => void) => (
-    <div className="flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-end" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+    <div className="flex flex-col gap-2 rounded-lg border bg-muted p-3 sm:flex-row sm:items-end">
       <div className="flex-1">
-        <label className="mb-1 block text-[11px] font-medium" style={{ color: 'var(--text-secondary)' }}>Name</label>
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full rounded border px-2 py-1.5 text-sm outline-none focus:border-accent"
-          style={{ backgroundColor: 'var(--bg-primary)' }}
-          autoFocus
-        />
+        <label className="mb-1 block text-[11px] font-medium text-muted-foreground">Name</label>
+        <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
       </div>
       <div className="w-28">
-        <label className="mb-1 block text-[11px] font-medium" style={{ color: 'var(--text-secondary)' }}>Type</label>
-        <select
-          value={type}
-          onChange={(e) => setType(e.target.value as TransactionType)}
-          className="w-full rounded border px-2 py-1.5 text-sm outline-none focus:border-accent"
-          style={{ backgroundColor: 'var(--bg-primary)' }}
-        >
-          <option value="expense">Expense</option>
-          <option value="income">Income</option>
-        </select>
+        <label className="mb-1 block text-[11px] font-medium text-muted-foreground">Type</label>
+        <Select value={type} onValueChange={(v) => setType(v as TransactionType)}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="expense">Expense</SelectItem>
+            <SelectItem value="income">Income</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       <div className="flex gap-1">
-        <button onClick={onSave} className="rounded p-1.5 text-emerald-500 hover:bg-emerald-500/10">
+        <Button variant="ghost" size="sm" onClick={onSave} className="text-emerald-500 hover:text-emerald-600">
           <Check size={16} />
-        </button>
-        <button onClick={cancelEdit} className="rounded p-1.5 text-[var(--text-tertiary)] hover:bg-[var(--bg-tertiary)]">
+        </Button>
+        <Button variant="ghost" size="sm" onClick={cancelEdit}>
           <X size={16} />
-        </button>
+        </Button>
       </div>
     </div>
   )
@@ -95,21 +91,20 @@ export function CategoryEditor() {
 
   return (
     <Card>
-      <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>
-          Categories
-        </h3>
-        <Button size="sm" variant="secondary" onClick={() => { cancelEdit(); setAdding(true) }}>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-base">Categories</CardTitle>
+        <Button size="sm" variant="outline" onClick={() => { cancelEdit(); setAdding(true) }}>
           <Plus size={14} /> Add
         </Button>
-      </div>
+      </CardHeader>
+      <CardContent>
 
       <div className="space-y-2">
         {adding && renderEditRow(handleAdd)}
 
         {expenseCategories.length > 0 && (
           <div>
-            <p className="mb-1 mt-3 text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-tertiary)' }}>
+            <p className="mb-1 mt-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Expense
             </p>
             {expenseCategories.map((cat) =>
@@ -118,24 +113,15 @@ export function CategoryEditor() {
                   {renderEditRow(() => handleSaveEdit(cat.id))}
                 </div>
               ) : (
-                <div
-                  key={cat.id}
-                  className="flex items-center justify-between rounded-lg border px-3 py-2 mb-1"
-                >
+                <div key={cat.id} className="flex items-center justify-between rounded-lg border px-3 py-2 mb-1">
                   <span className="text-sm font-medium">{cat.name}</span>
                   <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => { setEditingId(cat.id); setName(cat.name); setType(cat.type) }}
-                      className="rounded p-1 text-[var(--text-tertiary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
-                    >
+                    <Button variant="ghost" size="icon-xs" onClick={() => { setEditingId(cat.id); setName(cat.name); setType(cat.type) }}>
                       <Pencil size={13} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(cat.id)}
-                      className="rounded p-1 text-[var(--text-tertiary)] hover:bg-red-500/10 hover:text-red-500"
-                    >
+                    </Button>
+                    <Button variant="ghost" size="icon-xs" onClick={() => handleDelete(cat.id)} className="hover:text-destructive">
                       <Trash2 size={13} />
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )
@@ -145,7 +131,7 @@ export function CategoryEditor() {
 
         {incomeCategories.length > 0 && (
           <div>
-            <p className="mb-1 mt-3 text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-tertiary)' }}>
+            <p className="mb-1 mt-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Income
             </p>
             {incomeCategories.map((cat) =>
@@ -154,24 +140,15 @@ export function CategoryEditor() {
                   {renderEditRow(() => handleSaveEdit(cat.id))}
                 </div>
               ) : (
-                <div
-                  key={cat.id}
-                  className="flex items-center justify-between rounded-lg border px-3 py-2 mb-1"
-                >
+                <div key={cat.id} className="flex items-center justify-between rounded-lg border px-3 py-2 mb-1">
                   <span className="text-sm font-medium">{cat.name}</span>
                   <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => { setEditingId(cat.id); setName(cat.name); setType(cat.type) }}
-                      className="rounded p-1 text-[var(--text-tertiary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
-                    >
+                    <Button variant="ghost" size="icon-xs" onClick={() => { setEditingId(cat.id); setName(cat.name); setType(cat.type) }}>
                       <Pencil size={13} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(cat.id)}
-                      className="rounded p-1 text-[var(--text-tertiary)] hover:bg-red-500/10 hover:text-red-500"
-                    >
+                    </Button>
+                    <Button variant="ghost" size="icon-xs" onClick={() => handleDelete(cat.id)} className="hover:text-destructive">
                       <Trash2 size={13} />
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )
@@ -180,11 +157,10 @@ export function CategoryEditor() {
         )}
 
         {categories.length === 0 && !adding && (
-          <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
-            No categories yet. Add one to start organizing transactions.
-          </p>
+          <p className="text-sm text-muted-foreground">No categories yet. Add one to start organizing transactions.</p>
         )}
       </div>
+      </CardContent>
     </Card>
   )
 }

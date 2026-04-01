@@ -2,7 +2,7 @@ from datetime import date
 
 from pydantic import BaseModel, ConfigDict
 
-from app.models.enums import BudgetPeriod, BudgetType
+from app.db.models.enums import BudgetPeriod, BudgetType
 from app.schemas.category import CategoryRead
 
 

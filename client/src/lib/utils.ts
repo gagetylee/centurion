@@ -1,4 +1,10 @@
+import { clsx, type ClassValue } from 'clsx'
+import { twMerge } from 'tailwind-merge'
 import { format, parse, startOfMonth, endOfMonth, eachDayOfInterval, getDaysInMonth } from 'date-fns'
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
 
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-CA', {
@@ -57,8 +63,4 @@ export function getProgressTextColor(percent: number): string {
   if (percent < 75) return 'text-emerald-600 dark:text-emerald-400'
   if (percent <= 100) return 'text-amber-600 dark:text-amber-400'
   return 'text-red-600 dark:text-red-400'
-}
-
-export function cn(...classes: (string | false | null | undefined)[]): string {
-  return classes.filter(Boolean).join(' ')
 }

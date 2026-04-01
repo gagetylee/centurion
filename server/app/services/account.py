@@ -2,7 +2,7 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models.account import Account
+from app.db.models.account import Account
 from app.schemas.account import AccountCreate, AccountUpdate
 
 

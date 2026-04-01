@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 
-from app.models.enums import AccountType
+from app.db.models.enums import AccountType
 
 
 class AccountCreate(BaseModel):
