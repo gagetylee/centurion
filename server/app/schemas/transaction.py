@@ -25,6 +25,15 @@ class TransactionUpdate(BaseModel):
     category_id: int | None = None
 
 
+class TransactionFilter(BaseModel):
+    skip: int = 0
+    limit: int = 100
+    account_id: int | None = None
+    category_id: int | None = None
+    start_date: datetime.date | None = None
+    end_date: datetime.date | None = None
+
+
 class TransactionRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
