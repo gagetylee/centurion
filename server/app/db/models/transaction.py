@@ -15,6 +15,7 @@ class Transaction(Base):
     type = Column(Enum(TransactionType), nullable=False)
     account_id = Column(Integer, ForeignKey("accounts.id"))
     category_id = Column(Integer, ForeignKey("categories.id"))
+    plaid_transaction_id = Column(String, unique=True)
 
     account = relationship("Account", back_populates="transactions")
     category = relationship("Category", back_populates="transactions")

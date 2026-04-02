@@ -2,7 +2,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import accounts, budgets, categories, transactions
+from app.routers import accounts, budgets, categories, plaid, transactions
 
 
 def create_app() -> FastAPI:
@@ -20,6 +20,7 @@ def create_app() -> FastAPI:
     app.include_router(categories.router)
     app.include_router(transactions.router)
     app.include_router(budgets.router)
+    app.include_router(plaid.router)
 
     @app.get("/")
     def health():

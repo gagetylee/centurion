@@ -13,3 +13,4 @@ class Account(Base):
     type = Column(Enum(AccountType), nullable=False)
 
     transactions = relationship("Transaction", back_populates="account")
+    plaid_item = relationship("PlaidItem", back_populates="account", uselist=False)
