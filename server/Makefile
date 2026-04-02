@@ -1,4 +1,4 @@
-.PHONY: docker-up docker-down docker-clean docker-restart docker-logs docker-ps db migrate migration seed api
+.PHONY: docker-up docker-down docker-clean docker-restart docker-logs docker-ps db migrate migration seed api link-account
 
 # Infrastructure
 docker-up:
@@ -35,3 +35,7 @@ seed:
 # Server
 api:
 	uv run uvicorn app.main:app --reload
+
+# Scripts
+link-account:
+	uv run python -m scripts.link_account

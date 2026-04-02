@@ -11,7 +11,6 @@ from app.config import PLAID_CLIENT_ID, PLAID_SECRET, PLAID_ENV
 
 PLAID_ENV_URLS = {
     "sandbox": plaid.Environment.Sandbox,
-    "development": plaid.Environment.Development,
     "production": plaid.Environment.Production,
 }
 
