@@ -1,12 +1,15 @@
 from pydantic import BaseModel
 
 
-class Classification(BaseModel):
+class ParentClassification(BaseModel):
     merchant_name: str | None = None
     parent_category: str | None = None
-    subcategory: str | None = None
     confidence: str = "high"
     needs_review: bool = False
+
+
+class SubcategoryClassification(BaseModel):
+    subcategory: str | None = None
 
 
 class EnrichmentResult(BaseModel):

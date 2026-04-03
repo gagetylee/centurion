@@ -7,17 +7,16 @@ logger = logging.getLogger(__name__)
 from app.clients.ollama import OllamaClient
 from app.db.models.category import Category
 from app.db.models.transaction import Transaction
-from app.schemas.classification import Classification, EnrichmentResult
+from app.schemas.classification import EnrichmentResult, ParentClassification, SubcategoryClassification
 
-CLASSIFY_PROMPT = """\
+PARENT_PROMPT = """\
 You are a bank transaction categorizer. Given a transaction, return a single JSON object.
 
 Rules:
 1. merchant_name: Extract the real merchant name. Strip suffixes like "US", "CA", store numbers, and transaction codes.
-2. parent_category: Pick EXACTLY ONE parent from the hierarchy below. Do not invent categories.
-3. subcategory: Pick the most specific sub-category under your chosen parent. Use null if none fit well.
-4. confidence: "high", "medium", or "low"
-5. needs_review: true if confidence is "low" OR category is ambiguous
+2. parent_category: Pick EXACTLY ONE from the list below. Do not invent categories.
+3. confidence: "high", "medium", or "low"
+4. needs_review: true if confidence is "low" OR category is ambiguous
 
 Categories:
 {categories}
@@ -25,25 +24,41 @@ Categories:
 Examples:
 
 Transaction: "AMZN MKTP US*AB1CD2EF" | $42.99
-{{"merchant_name": "Amazon", "parent_category": "Miscellaneous", "subcategory": "One-Time Purchases", "confidence": "medium", "needs_review": false}}
+{{"merchant_name": "Amazon", "parent_category": "Miscellaneous", "confidence": "medium", "needs_review": false}}
 
 Transaction: "TST* RAIN OR SHINE CAFE" | $6.75
-{{"merchant_name": "Rain or Shine Cafe", "parent_category": "Food", "subcategory": "Coffee Shops", "confidence": "high", "needs_review": false}}
+{{"merchant_name": "Rain or Shine Cafe", "parent_category": "Food", "confidence": "high", "needs_review": false}}
 
 Transaction: "UBER *EATS 4F2A1B" | $28.50
-{{"merchant_name": "Uber Eats", "parent_category": "Food", "subcategory": "Takeout & Delivery", "confidence": "high", "needs_review": false}}
+{{"merchant_name": "Uber Eats", "parent_category": "Food", "confidence": "high", "needs_review": false}}
 
 Transaction: "PAYROLL DEPOSIT - ACME CO" | $3200.00
-{{"merchant_name": "Acme Co", "parent_category": "Income", "subcategory": "Salary", "confidence": "high", "needs_review": false}}
+{{"merchant_name": "Acme Co", "parent_category": "Income", "confidence": "high", "needs_review": false}}
 
 Transaction: "SP * 8842910 VANCOUVER" | $24.99
-{{"merchant_name": "Unknown", "parent_category": "Miscellaneous", "subcategory": null, "confidence": "low", "needs_review": true}}
+{{"merchant_name": "Unknown", "parent_category": "Miscellaneous", "confidence": "low", "needs_review": true}}
 
 Now classify this transaction:
 - Description: {description}
 - Amount: ${amount:.2f}
 
 Respond with ONLY the JSON object, no markdown fences, no explanation:"""
+
+SUBCATEGORY_PROMPT = """\
+Given a transaction already classified under "{parent_category}", pick the most specific sub-category.
+
+Sub-categories:
+{subcategories}
+
+Transaction:
+- Description: {description}
+- Amount: ${amount:.2f}
+- Merchant: {merchant_name}
+
+If none of the sub-categories fit well, return null.
+
+Respond with ONLY this JSON, no markdown fences, no explanation:
+{{"subcategory": "..."}}"""
 
 
 class ClassificationService:
@@ -80,16 +95,6 @@ class ClassificationService:
             self._load_categories()
         return self._subcategories
 
-    def _format_category_hierarchy(self) -> str:
-        lines = []
-        for name, parent_id in self.parent_categories.items():
-            children = self.subcategories.get(parent_id, {})
-            lines.append(f"[{name}]")
-            if children:
-                for child in children:
-                    lines.append(f"  - {child}")
-        return "\n".join(lines)
-
     def ensure_categories_loaded(self) -> None:
         """Pre-load categories into memory. Call before spawning threads."""
         if self._parent_categories is None:
@@ -97,23 +102,46 @@ class ClassificationService:
 
     # ── Classification ──────────────────────────────────────
 
-    def _classify(self, description: str, amount_cents: int) -> Classification:
-        prompt = CLASSIFY_PROMPT.format(
+    def _classify_parent(self, description: str, amount_cents: int) -> ParentClassification:
+        prompt = PARENT_PROMPT.format(
             description=description,
             amount=abs(amount_cents) / 100,
-            categories=self._format_category_hierarchy(),
+            categories="\n".join(f"- {name}" for name in self.parent_categories),
         )
         try:
             data = self.llm.chat_json(prompt)
-            result = Classification(**data)
+            result = ParentClassification(**data)
             logger.info(
-                "  → merchant: %s | category: %s > %s | confidence: %s",
-                result.merchant_name, result.parent_category, result.subcategory, result.confidence,
+                "  → merchant: %s | parent: %s | confidence: %s",
+                result.merchant_name, result.parent_category, result.confidence,
             )
             return result
         except Exception as e:
-            logger.warning("  → classification failed: %s", e)
-            return Classification(needs_review=True)
+            logger.warning("  → parent classification failed: %s", e)
+            return ParentClassification(needs_review=True)
+
+    def _classify_subcategory(
+        self, description: str, amount_cents: int, merchant_name: str | None, parent_name: str, parent_id: int,
+    ) -> SubcategoryClassification:
+        children = self.subcategories.get(parent_id, {})
+        if not children:
+            return SubcategoryClassification()
+
+        prompt = SUBCATEGORY_PROMPT.format(
+            description=description,
+            amount=abs(amount_cents) / 100,
+            merchant_name=merchant_name or "Unknown",
+            parent_category=parent_name,
+            subcategories="\n".join(f"- {name}" for name in children),
+        )
+        try:
+            data = self.llm.chat_json(prompt)
+            result = SubcategoryClassification(**data)
+            logger.info("  → subcategory: %s", result.subcategory)
+            return result
+        except Exception as e:
+            logger.warning("  → subcategory classification failed: %s", e)
+            return SubcategoryClassification()
 
     def classify(self, description: str, amount_cents: int) -> EnrichmentResult:
         """Thread-safe classification with merchant cache lookup.
@@ -128,15 +156,15 @@ class ClassificationService:
                 needs_review=False,
             )
 
-        # Cache miss — full LLM classification
-        result = self._classify(description, amount_cents)
+        # Stage 1: parent category + merchant extraction
+        parent_result = self._classify_parent(description, amount_cents)
 
         enrichment = EnrichmentResult(
-            merchant_name=result.merchant_name,
-            needs_review=result.needs_review,
+            merchant_name=parent_result.merchant_name,
+            needs_review=parent_result.needs_review,
         )
 
-        parent_name = result.parent_category
+        parent_name = parent_result.parent_category
         if not parent_name or parent_name not in self.parent_categories:
             if parent_name:
                 logger.warning("  → unknown parent category: %s — flagged for review", parent_name)
@@ -144,14 +172,19 @@ class ClassificationService:
             return enrichment
 
         parent_id = self.parent_categories[parent_name]
-        children = self.subcategories.get(parent_id, {})
 
-        if result.subcategory and result.subcategory in children:
-            enrichment.category_id = children[result.subcategory]
+        # Stage 2: subcategory
+        sub_result = self._classify_subcategory(
+            description, amount_cents, parent_result.merchant_name, parent_name, parent_id,
+        )
+
+        children = self.subcategories.get(parent_id, {})
+        if sub_result.subcategory and sub_result.subcategory in children:
+            enrichment.category_id = children[sub_result.subcategory]
         else:
             enrichment.category_id = parent_id
-            if result.subcategory:
-                logger.warning("  → unknown subcategory: %s — falling back to parent", result.subcategory)
+            if sub_result.subcategory:
+                logger.warning("  → unknown subcategory: %s — falling back to parent", sub_result.subcategory)
 
         return enrichment
 
