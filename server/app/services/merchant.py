@@ -1,7 +1,9 @@
 import logging
 import re
 
+from app.db.models.transaction import Transaction
 from app.repositories.merchant import MerchantRepository
+from app.schemas.classification import EnrichmentResult
 
 logger = logging.getLogger(__name__)
 
@@ -20,37 +22,48 @@ def normalize_description(raw: str) -> str:
 class MerchantService:
     def __init__(self, repo: MerchantRepository):
         self.repo = repo
-        self._cache: dict[str, tuple[str, int]] | None = None
+        self._cache: dict[str, tuple[str, int, int]] | None = None
 
     def load_cache(self) -> None:
         """Pre-load merchant patterns into memory. Call before spawning threads."""
         rows = self.repo.get_all_with_patterns()
         self._cache = {}
         for pattern, merchant in rows:
-            self._cache[pattern.normalized_description] = (merchant.name, merchant.category_id)
+            self._cache[pattern.normalized_description] = (merchant.name, merchant.category_id, merchant.id)
         logger.info("Loaded %d merchant patterns", len(self._cache))
 
     def lookup(self, description: str) -> tuple[str, int] | None:
         """Thread-safe lookup. Returns (merchant_name, category_id) or None."""
         normalized = normalize_description(description)
-        return self._cache.get(normalized)
+        cached = self._cache.get(normalized)
+        if cached:
+            return (cached[0], cached[1])
+        return None
 
-    def persist_from_transactions(self, transactions: list) -> None:
-        """Persist new merchant→category mappings discovered during enrichment."""
-        for txn in transactions:
-            if not txn.merchant_name or not txn.category_id:
+    def resolve_merchants(self, transactions: list[Transaction], enrichments: list[EnrichmentResult]) -> None:
+        """Create new merchants and set merchant_id on transactions."""
+        for txn, enrichment in zip(transactions, enrichments):
+            if not enrichment.merchant_name or not enrichment.category_id:
                 continue
 
             normalized = normalize_description(txn.description or "")
-            if not normalized or normalized in self._cache:
+            if not normalized:
                 continue
 
-            merchant = self.repo.get_by_name(txn.merchant_name)
+            # Cache hit — use cached merchant_id directly
+            cached = self._cache.get(normalized)
+            if cached:
+                txn.merchant_id = cached[2]
+                continue
+
+            # Cache miss — find or create merchant
+            merchant = self.repo.get_by_name(enrichment.merchant_name)
             if not merchant:
-                merchant = self.repo.create(txn.merchant_name, txn.category_id)
+                merchant = self.repo.create(enrichment.merchant_name, enrichment.category_id)
                 logger.info("  → new merchant: %s → category_id %d", merchant.name, merchant.category_id)
 
             if not self.repo.get_pattern(normalized):
                 self.repo.create_pattern(merchant.id, normalized)
 
-            self._cache[normalized] = (merchant.name, merchant.category_id)
+            self._cache[normalized] = (merchant.name, merchant.category_id, merchant.id)
+            txn.merchant_id = merchant.id

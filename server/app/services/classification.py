@@ -155,10 +155,10 @@ class ClassificationService:
 
         return enrichment
 
-    def enrich(self, transaction: Transaction) -> Transaction:
-        """Convenience wrapper: classifies and applies results to a Transaction."""
+    def enrich(self, transaction: Transaction) -> EnrichmentResult:
+        """Classifies and applies category + review status to a Transaction.
+        Returns the EnrichmentResult so the caller can resolve merchant_id."""
         result = self.classify(transaction.description or "", transaction.amount_cents)
-        transaction.merchant_name = result.merchant_name
         transaction.category_id = result.category_id
         transaction.needs_review = result.needs_review
-        return transaction
+        return result

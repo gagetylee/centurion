@@ -8,12 +8,13 @@ logger = logging.getLogger(__name__)
 from app.clients.plaid import PlaidClient
 from app.config import ENRICHMENT_WORKERS
 from app.db.models.enums import TransactionType
+from app.schemas.classification import EnrichmentResult
 from app.db.models.plaid_item import PlaidItem
 from app.db.models.transaction import Transaction
 from app.db.unit_of_work import UnitOfWork
 from app.repositories.transaction import TransactionRepository
 from app.services.classification import ClassificationService
-from app.services.merchant import MerchantService
+from app.services.merchant import MerchantService, normalize_description
 
 
 class BankService:
@@ -57,12 +58,30 @@ class BankService:
                 logger.info("+ %s | $%.2f | %s", txn.date, abs(txn.amount), txn.name)
                 new_transactions.append(transaction)
 
-            # Phase 2: Enrich — parallel classification (cache hits skip LLM)
-            with ThreadPoolExecutor(max_workers=ENRICHMENT_WORKERS) as pool:
-                list(pool.map(self.classification_service.enrich, new_transactions))
+            # Phase 2: Enrich — deduplicate by description, then parallel classify
+            groups: dict[str, list[int]] = {}
+            unique_txns: list[Transaction] = []
+            for i, t in enumerate(new_transactions):
+                key = normalize_description(t.description or "")
+                if key not in groups:
+                    groups[key] = []
+                    unique_txns.append(t)
+                groups[key].append(i)
 
-            # Phase 3: Persist — new merchants, then transactions, single commit
-            self.merchant_service.persist_from_transactions(new_transactions)
+            with ThreadPoolExecutor(max_workers=ENRICHMENT_WORKERS) as pool:
+                unique_enrichments = list(pool.map(self.classification_service.enrich, unique_txns))
+
+            # Fan out results to all transactions sharing the same description
+            enrichments: list[EnrichmentResult] = [None] * len(new_transactions)
+            for enrichment, t in zip(unique_enrichments, unique_txns):
+                key = normalize_description(t.description or "")
+                for idx in groups[key]:
+                    enrichments[idx] = enrichment
+                    new_transactions[idx].category_id = enrichment.category_id
+                    new_transactions[idx].needs_review = enrichment.needs_review
+
+            # Phase 3: Persist — resolve merchants, then transactions, single commit
+            self.merchant_service.resolve_merchants(new_transactions, enrichments)
             for t in new_transactions:
                 self.transaction_repo.create(t)
             synced += len(new_transactions)

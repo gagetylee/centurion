@@ -1,4 +1,4 @@
-.PHONY: help docker-up docker-down docker-clean docker-restart docker-logs docker-ps db migrate migration seed api link-account sync reset-sync ollama-pull
+.PHONY: help docker-up docker-down docker-clean docker-restart docker-logs docker-ps db migrate migration seed api link-account sync reset-sync reset-db ollama-pull
 
 .DEFAULT_GOAL := help
 
@@ -63,6 +63,12 @@ migrate:
 
 migration:
 	uv run alembic revision --autogenerate -m "$(msg)"
+
+reset-db:
+	uv run python -c "from app.db.database import engine, Base; import app.db.models; Base.metadata.drop_all(engine); print('Dropped all tables')"
+	uv run alembic stamp base
+	uv run alembic upgrade head
+	uv run python -c "from app.db.seed import seed_default_categories; seed_default_categories()"
 
 seed:
 	uv run python -m app.db.seed_budget

@@ -45,7 +45,7 @@ class TransactionRead(BaseModel):
     type: TransactionType
     account_id: int | None = None
     category_id: int | None = None
-    merchant_name: str | None = None
+    merchant_id: int | None = None
     is_recurring: bool = False
     needs_review: bool = False
     account: AccountRead | None = None
