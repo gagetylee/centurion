@@ -49,6 +49,7 @@ class BankService:
                 logger.info("+ %s | $%.2f | %s", txn.date, abs(txn.amount), txn.name)
                 self.classification_service.enrich(transaction)
                 self.transaction_repo.create(transaction)
+                self.transaction_repo.commit()
                 synced += 1
 
             for txn in result["modified"]:
@@ -68,10 +69,10 @@ class BankService:
                     logger.info("- Removed: %s", txn.transaction_id)
                     self.transaction_repo.delete(existing)
 
+            # Commit cursor + modifications/removals after full page
             plaid_item.cursor = result["next_cursor"]
             has_more = result["has_more"]
-
-        self.transaction_repo.commit()
+            self.transaction_repo.commit()
         logger.info("Sync complete: %d new transactions", synced)
         return synced
 
