@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="Personal Finance API", lifespan=lifespan)
+    app = FastAPI(title="Centurion API", lifespan=lifespan)
 
     app.add_middleware(
         CORSMiddleware,
