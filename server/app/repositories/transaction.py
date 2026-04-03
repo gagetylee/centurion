@@ -64,6 +64,3 @@ class TransactionRepository:
 
     def delete(self, txn: Transaction) -> None:
         self.db.delete(txn)
-
-    def commit(self) -> None:
-        self.db.commit()

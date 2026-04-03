@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.clients.plaid import PlaidClient
 from app.db.database import get_db
+from app.db.unit_of_work import UnitOfWork
 from app.repositories.transaction import TransactionRepository
 from app.services.account import AccountService
 from app.services.bank import BankService
@@ -11,6 +12,12 @@ from app.services.category import CategoryService
 from app.clients.ollama import OllamaClient
 from app.services.classification import ClassificationService
 from app.services.transaction import TransactionService
+
+
+def get_uow():
+    uow = UnitOfWork()
+    with uow:
+        yield uow
 
 
 def get_transaction_repository(db: Session = Depends(get_db)) -> TransactionRepository:
@@ -49,9 +56,10 @@ def get_classification_service(db: Session = Depends(get_db), llm: OllamaClient 
 
 
 def get_bank_service(
-    db: Session = Depends(get_db),
+    uow: UnitOfWork = Depends(get_uow),
     plaid_client: PlaidClient = Depends(get_plaid_client),
-    transaction_repo: TransactionRepository = Depends(get_transaction_repository),
-    classification_service: ClassificationService = Depends(get_classification_service),
+    llm: OllamaClient = Depends(get_ollama_client),
 ) -> BankService:
-    return BankService(db, plaid_client, transaction_repo, classification_service)
+    transaction_repo = TransactionRepository(uow.session)
+    classification_service = ClassificationService(uow.session, llm)
+    return BankService(uow, plaid_client, transaction_repo, classification_service)

@@ -34,7 +34,7 @@ class TransactionService:
         self._validate_category_type(data.category_id, data.type)
         txn = Transaction(**data.model_dump())
         self.repo.create(txn)
-        self.repo.commit()
+        self.repo.db.commit()
         return txn
 
     def update(self, transaction_id: int, data: TransactionUpdate) -> Transaction:
@@ -44,10 +44,10 @@ class TransactionService:
         effective_category_id = updates.get("category_id", txn.category_id)
         self._validate_category_type(effective_category_id, effective_type)
         self.repo.update(txn, updates)
-        self.repo.commit()
+        self.repo.db.commit()
         return txn
 
     def delete(self, transaction_id: int) -> None:
         txn = self.get(transaction_id)
         self.repo.delete(txn)
-        self.repo.commit()
+        self.repo.db.commit()

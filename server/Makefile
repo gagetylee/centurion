@@ -51,7 +51,7 @@ docker-ps:
 
 # LLM
 ollama-pull:
-	ollama pull gemma4:31b
+	ollama pull gemma4:e4b
 
 # Database
 db:
