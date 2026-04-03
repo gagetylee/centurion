@@ -47,11 +47,14 @@ Respond with ONLY the JSON object, no markdown fences, no explanation:"""
 
 
 class ClassificationService:
-    def __init__(self, db: Session, llm: OllamaClient):
+    def __init__(self, db: Session, llm: OllamaClient, merchant_service):
         self.db = db
         self.llm = llm
+        self.merchant_service = merchant_service
         self._parent_categories: dict[str, int] | None = None
         self._subcategories: dict[int, dict[str, int]] | None = None
+
+    # ── Category cache ──────────────────────────────────────
 
     def _load_categories(self) -> None:
         rows = self.db.query(Category).all()
@@ -87,6 +90,13 @@ class ClassificationService:
                     lines.append(f"  - {child}")
         return "\n".join(lines)
 
+    def ensure_categories_loaded(self) -> None:
+        """Pre-load categories into memory. Call before spawning threads."""
+        if self._parent_categories is None:
+            self._load_categories()
+
+    # ── Classification ──────────────────────────────────────
+
     def _classify(self, description: str, amount_cents: int) -> Classification:
         prompt = CLASSIFY_PROMPT.format(
             description=description,
@@ -105,14 +115,20 @@ class ClassificationService:
             logger.warning("  → classification failed: %s", e)
             return Classification(needs_review=True)
 
-    def ensure_categories_loaded(self) -> None:
-        """Pre-load categories into memory. Call before spawning threads."""
-        if self._parent_categories is None:
-            self._load_categories()
-
     def classify(self, description: str, amount_cents: int) -> EnrichmentResult:
-        """Thread-safe classification. Only reads cached categories and calls the LLM.
-        Does NOT access self.db — categories must be loaded beforehand."""
+        """Thread-safe classification with merchant cache lookup.
+        Does NOT access self.db — caches must be loaded beforehand."""
+        cached = self.merchant_service.lookup(description)
+        if cached:
+            merchant_name, category_id = cached
+            logger.info("  → cache hit: %s → category_id %d", merchant_name, category_id)
+            return EnrichmentResult(
+                merchant_name=merchant_name,
+                category_id=category_id,
+                needs_review=False,
+            )
+
+        # Cache miss — full LLM classification
         result = self._classify(description, amount_cents)
 
         enrichment = EnrichmentResult(

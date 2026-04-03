@@ -13,14 +13,16 @@ from app.db.models.transaction import Transaction
 from app.db.unit_of_work import UnitOfWork
 from app.repositories.transaction import TransactionRepository
 from app.services.classification import ClassificationService
+from app.services.merchant import MerchantService
 
 
 class BankService:
-    def __init__(self, uow: UnitOfWork, plaid_client: PlaidClient, transaction_repo: TransactionRepository, classification_service: ClassificationService):
+    def __init__(self, uow: UnitOfWork, plaid_client: PlaidClient, transaction_repo: TransactionRepository, classification_service: ClassificationService, merchant_service: MerchantService):
         self.uow = uow
         self.plaid_client = plaid_client
         self.transaction_repo = transaction_repo
         self.classification_service = classification_service
+        self.merchant_service = merchant_service
 
     def sync(self, plaid_item_id: int) -> int:
         plaid_item = self.uow.session.query(PlaidItem).filter(PlaidItem.id == plaid_item_id).first()
@@ -29,6 +31,7 @@ class BankService:
 
         logger.info("Syncing plaid item %d (account: %s)", plaid_item.id, plaid_item.account.name)
         self.classification_service.ensure_categories_loaded()
+        self.merchant_service.load_cache()
         synced = 0
         has_more = True
 
@@ -54,11 +57,12 @@ class BankService:
                 logger.info("+ %s | $%.2f | %s", txn.date, abs(txn.amount), txn.name)
                 new_transactions.append(transaction)
 
-            # Phase 2: Enrich — parallel LLM calls (no DB access in threads)
+            # Phase 2: Enrich — parallel classification (cache hits skip LLM)
             with ThreadPoolExecutor(max_workers=ENRICHMENT_WORKERS) as pool:
                 list(pool.map(self.classification_service.enrich, new_transactions))
 
-            # Phase 3: Persist — batch write + single commit
+            # Phase 3: Persist — new merchants, then transactions, single commit
+            self.merchant_service.persist_from_transactions(new_transactions)
             for t in new_transactions:
                 self.transaction_repo.create(t)
             synced += len(new_transactions)

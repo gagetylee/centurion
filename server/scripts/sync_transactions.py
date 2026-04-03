@@ -7,10 +7,12 @@ import logging
 
 from app.clients.plaid import PlaidClient
 from app.db.unit_of_work import UnitOfWork
+from app.repositories.merchant import MerchantRepository
 from app.repositories.transaction import TransactionRepository
 from app.services.bank import BankService
 from app.clients.ollama import OllamaClient
 from app.services.classification import ClassificationService
+from app.services.merchant import MerchantService
 
 logging.basicConfig(
     level=logging.INFO,
@@ -26,8 +28,10 @@ def main():
         plaid_client = PlaidClient()
         ollama_client = OllamaClient()
         transaction_repo = TransactionRepository(uow.session)
-        classification_service = ClassificationService(uow.session, ollama_client)
-        bank_service = BankService(uow, plaid_client, transaction_repo, classification_service)
+        merchant_repo = MerchantRepository(uow.session)
+        merchant_service = MerchantService(merchant_repo)
+        classification_service = ClassificationService(uow.session, ollama_client, merchant_service)
+        bank_service = BankService(uow, plaid_client, transaction_repo, classification_service, merchant_service)
 
         total = bank_service.sync_all()
         logger.info("Done! Synced %d transactions.", total)
