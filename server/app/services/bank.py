@@ -10,15 +10,15 @@ from app.db.models.enums import TransactionType
 from app.db.models.plaid_item import PlaidItem
 from app.db.models.transaction import Transaction
 from app.repositories.transaction import TransactionRepository
-from app.services.metadata import MetadataService
+from app.services.classification import ClassificationService
 
 
 class BankService:
-    def __init__(self, db: Session, plaid_client: PlaidClient, transaction_repo: TransactionRepository, metadata_service: MetadataService):
+    def __init__(self, db: Session, plaid_client: PlaidClient, transaction_repo: TransactionRepository, classification_service: ClassificationService):
         self.db = db
         self.plaid_client = plaid_client
         self.transaction_repo = transaction_repo
-        self.metadata_service = metadata_service
+        self.classification_service = classification_service
 
     def sync(self, plaid_item_id: int) -> int:
         plaid_item = self.db.query(PlaidItem).filter(PlaidItem.id == plaid_item_id).first()
@@ -47,7 +47,7 @@ class BankService:
                     plaid_transaction_id=txn.transaction_id,
                 )
                 logger.info("+ %s | $%.2f | %s", txn.date, abs(txn.amount), txn.name)
-                self.metadata_service.enrich(transaction)
+                self.classification_service.enrich(transaction)
                 self.transaction_repo.create(transaction)
                 synced += 1
 

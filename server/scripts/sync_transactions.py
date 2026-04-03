@@ -9,7 +9,8 @@ from app.clients.plaid import PlaidClient
 from app.db.database import SessionLocal
 from app.repositories.transaction import TransactionRepository
 from app.services.bank import BankService
-from app.services.metadata import MetadataService
+from app.clients.ollama import OllamaClient
+from app.services.classification import ClassificationService
 
 logging.basicConfig(
     level=logging.INFO,
@@ -23,8 +24,9 @@ def main():
     try:
         plaid_client = PlaidClient()
         transaction_repo = TransactionRepository(db)
-        metadata_service = MetadataService(db)
-        bank_service = BankService(db, plaid_client, transaction_repo, metadata_service)
+        ollama_client = OllamaClient()
+        classification_service = ClassificationService(db, ollama_client)
+        bank_service = BankService(db, plaid_client, transaction_repo, classification_service)
 
         total = bank_service.sync_all()
         print(f"\nDone! Synced {total} transactions.")
