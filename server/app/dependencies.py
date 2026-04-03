@@ -8,6 +8,7 @@ from app.services.account import AccountService
 from app.services.bank import BankService
 from app.services.budget import BudgetService
 from app.services.category import CategoryService
+from app.services.metadata import MetadataService
 from app.services.transaction import TransactionService
 
 
@@ -38,9 +39,14 @@ def get_plaid_client() -> PlaidClient:
     return PlaidClient()
 
 
+def get_metadata_service(db: Session = Depends(get_db)) -> MetadataService:
+    return MetadataService(db)
+
+
 def get_bank_service(
     db: Session = Depends(get_db),
     plaid_client: PlaidClient = Depends(get_plaid_client),
     transaction_repo: TransactionRepository = Depends(get_transaction_repository),
+    metadata_service: MetadataService = Depends(get_metadata_service),
 ) -> BankService:
-    return BankService(db, plaid_client, transaction_repo)
+    return BankService(db, plaid_client, transaction_repo, metadata_service)

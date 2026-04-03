@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Date, Enum
+from sqlalchemy import Boolean, Column, Integer, String, ForeignKey, Date, Enum
 from sqlalchemy.orm import relationship
 
 from app.db.database import Base
@@ -16,6 +16,9 @@ class Transaction(Base):
     account_id = Column(Integer, ForeignKey("accounts.id"))
     category_id = Column(Integer, ForeignKey("categories.id"))
     plaid_transaction_id = Column(String, unique=True)
+    merchant_name = Column(String)
+    is_recurring = Column(Boolean, default=False)
+    needs_review = Column(Boolean, default=False)
 
     account = relationship("Account", back_populates="transactions")
     category = relationship("Category", back_populates="transactions")

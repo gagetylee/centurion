@@ -1,4 +1,4 @@
-.PHONY: docker-up docker-down docker-clean docker-restart docker-logs docker-ps db migrate migration seed api link-account
+.PHONY: docker-up docker-down docker-clean docker-restart docker-logs docker-ps db migrate migration seed api link-account sync reset-sync ollama-pull
 
 # Infrastructure
 docker-up:
@@ -18,6 +18,10 @@ docker-logs:
 
 docker-ps:
 	docker compose -f ../docker-compose.yml ps
+
+# LLM
+ollama-pull:
+	ollama pull qwen3:30b
 
 # Database
 db:
@@ -39,3 +43,9 @@ api:
 # Scripts
 link-account:
 	uv run python -m scripts.link_account
+
+sync:
+	uv run python -m scripts.sync_transactions
+
+reset-sync:
+	uv run python -m scripts.reset_sync
