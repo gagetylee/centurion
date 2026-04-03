@@ -30,6 +30,7 @@ class TransactionFilter(BaseModel):
     limit: int = 100
     account_id: int | None = None
     category_id: int | None = None
+    include_subcategories: bool = False
     start_date: datetime.date | None = None
     end_date: datetime.date | None = None
 

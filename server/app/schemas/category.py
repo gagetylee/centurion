@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pydantic import BaseModel, ConfigDict
 
 from app.db.models.enums import TransactionType
@@ -5,7 +7,8 @@ from app.db.models.enums import TransactionType
 
 class CategoryCreate(BaseModel):
     name: str
-    type: TransactionType
+    type: TransactionType | None = None
+    parent_id: int | None = None
 
 
 class CategoryUpdate(BaseModel):
@@ -19,3 +22,9 @@ class CategoryRead(BaseModel):
     id: int
     name: str
     type: TransactionType
+    parent_id: int | None = None
+    is_default: bool = False
+
+
+class CategoryTreeRead(CategoryRead):
+    children: list[CategoryTreeRead] = []

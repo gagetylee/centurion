@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 
-from app.schemas.category import CategoryCreate, CategoryRead, CategoryUpdate
+from app.schemas.category import CategoryCreate, CategoryRead, CategoryTreeRead, CategoryUpdate
 from app.dependencies import get_category_service
 from app.services.category import CategoryService
 
@@ -12,9 +12,17 @@ def create_category(data: CategoryCreate, service: CategoryService = Depends(get
     return service.create(data)
 
 
-@router.get("/", response_model=list[CategoryRead])
-def list_categories(skip: int = 0, limit: int = 100, service: CategoryService = Depends(get_category_service)):
-    return service.get_all(skip, limit)
+@router.get("/", response_model=list[CategoryRead] | list[CategoryTreeRead])
+def list_categories(
+    skip: int = 0,
+    limit: int = 100,
+    parent_id: int | None = None,
+    nested: bool = False,
+    service: CategoryService = Depends(get_category_service),
+):
+    if nested:
+        return service.get_tree()
+    return service.get_all(skip, limit, parent_id)
 
 
 @router.get("/{category_id}", response_model=CategoryRead)

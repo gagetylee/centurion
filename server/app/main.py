@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
@@ -10,11 +11,18 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
 )
 
+from app.db.seed import seed_default_categories
 from app.routers import accounts, budgets, categories, plaid, transactions
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    seed_default_categories()
+    yield
+
+
 def create_app() -> FastAPI:
-    app = FastAPI(title="Personal Finance API")
+    app = FastAPI(title="Personal Finance API", lifespan=lifespan)
 
     app.add_middleware(
         CORSMiddleware,

@@ -1,67 +1,103 @@
-"""Seed script to create budget categories and monthly budgets from Gage's budget plan."""
+"""Seed script to create monthly budgets from Gage's budget plan.
+
+Assumes default categories have already been seeded (via app startup).
+"""
+
+import logging
 
 from app.db.database import SessionLocal
 from app.db.models.category import Category
 from app.db.models.budget import Budget
-from app.db.models.enums import TransactionType, BudgetPeriod, BudgetType
+from app.db.models.enums import BudgetPeriod, BudgetType
+
+logger = logging.getLogger(__name__)
 
 
-CATEGORIES_AND_BUDGETS = [
+# Maps (parent_name, child_name, budget_cents, budget_type)
+# Use None for child_name to target the parent category itself.
+BUDGETS = [
     # Income
-    {"name": "Net Take-Home Pay (TrustFlight)", "type": TransactionType.income, "budget": 5_300_00, "budget_type": BudgetType.fixed},
+    ("Income", "Salary", 5_300_00, BudgetType.fixed),
 
-    # Fixed Expenses
-    {"name": "Rent", "type": TransactionType.expense, "budget": 2_000_00, "budget_type": BudgetType.fixed},
-    {"name": "Car Loan Payment", "type": TransactionType.expense, "budget": 500_00, "budget_type": BudgetType.fixed},
-    {"name": "Internet", "type": TransactionType.expense, "budget": 25_00, "budget_type": BudgetType.fixed},
-    {"name": "Gym Membership", "type": TransactionType.expense, "budget": 60_00, "budget_type": BudgetType.fixed},
-    {"name": "Claude Pro Subscription", "type": TransactionType.expense, "budget": 30_00, "budget_type": BudgetType.fixed},
-    {"name": "Other Subscriptions", "type": TransactionType.expense, "budget": 50_00, "budget_type": BudgetType.fixed},
+    # Housing
+    ("Housing", "Rent", 2_000_00, BudgetType.fixed),
+    ("Housing", "Internet", 25_00, BudgetType.fixed),
 
-    # Variable Expenses
-    {"name": "Groceries", "type": TransactionType.expense, "budget": 400_00, "budget_type": BudgetType.variable},
-    {"name": "Dining Out / Takeout / Coffee", "type": TransactionType.expense, "budget": 200_00, "budget_type": BudgetType.variable},
-    {"name": "Transportation", "type": TransactionType.expense, "budget": 150_00, "budget_type": BudgetType.variable},
-    {"name": "Entertainment / Hobbies", "type": TransactionType.expense, "budget": 200_00, "budget_type": BudgetType.variable},
-    {"name": "Clothing / Fashion", "type": TransactionType.expense, "budget": 100_00, "budget_type": BudgetType.variable},
-    {"name": "Personal Care", "type": TransactionType.expense, "budget": 100_00, "budget_type": BudgetType.variable},
+    # Transportation
+    ("Transportation", "Car Payment", 500_00, BudgetType.fixed),
+
+    # Food
+    ("Food", "Groceries", 400_00, BudgetType.variable),
+    ("Food", "Dining Out", 200_00, BudgetType.variable),
+
+    # Fitness & Recreation
+    ("Fitness & Recreation", "Gym Membership", 60_00, BudgetType.fixed),
+
+    # Subscriptions & Memberships
+    ("Subscriptions & Memberships", "Software & Apps", 30_00, BudgetType.fixed),
+    ("Subscriptions & Memberships", None, 50_00, BudgetType.fixed),
+
+    # Transportation (variable)
+    ("Transportation", None, 150_00, BudgetType.variable),
+
+    # Entertainment
+    ("Entertainment", None, 200_00, BudgetType.variable),
+
+    # Personal Care
+    ("Personal Care", "Clothing & Shoes", 100_00, BudgetType.variable),
+    ("Personal Care", None, 100_00, BudgetType.variable),
 ]
+
+
+def _find_category(db, parent_name: str, child_name: str | None) -> Category | None:
+    if child_name is None:
+        return db.query(Category).filter(
+            Category.name == parent_name,
+            Category.parent_id.is_(None),
+        ).first()
+
+    parent = db.query(Category).filter(
+        Category.name == parent_name,
+        Category.parent_id.is_(None),
+    ).first()
+    if not parent:
+        return None
+
+    return db.query(Category).filter(
+        Category.name == child_name,
+        Category.parent_id == parent.id,
+    ).first()
 
 
 def seed():
     db = SessionLocal()
     try:
-        for entry in CATEGORIES_AND_BUDGETS:
-            # Check if category already exists
-            existing = db.query(Category).filter(Category.name == entry["name"]).first()
-            if existing:
-                print(f"  Category '{entry['name']}' already exists, skipping.")
-                category = existing
-            else:
-                category = Category(name=entry["name"], type=entry["type"])
-                db.add(category)
-                db.flush()
-                print(f"+ Created category: {entry['name']}")
+        for parent_name, child_name, amount_cents, budget_type in BUDGETS:
+            category = _find_category(db, parent_name, child_name)
+            label = f"{parent_name} > {child_name}" if child_name else parent_name
 
-            # Check if budget already exists for this category
+            if not category:
+                logger.warning("Category '%s' not found, skipping budget.", label)
+                continue
+
             existing_budget = db.query(Budget).filter(Budget.category_id == category.id).first()
             if existing_budget:
-                print(f"  Budget for '{entry['name']}' already exists, skipping.")
+                logger.info("Budget for '%s' already exists, skipping.", label)
             else:
                 budget = Budget(
                     category_id=category.id,
-                    amount_cents=entry["budget"],
+                    amount_cents=amount_cents,
                     period=BudgetPeriod.monthly,
-                    type=entry["budget_type"],
+                    type=budget_type,
                 )
                 db.add(budget)
-                print(f"+ Created budget: {entry['name']} → ${entry['budget'] / 100:,.2f}/mo")
+                logger.info("+ Created budget: %s → $%s/mo", label, f"{amount_cents / 100:,.2f}")
 
         db.commit()
-        print("\nDone! All categories and budgets seeded.")
+        logger.info("Done! All budgets seeded.")
     except Exception as e:
         db.rollback()
-        print(f"Error: {e}")
+        logger.error("Error seeding budgets: %s", e)
         raise
     finally:
         db.close()

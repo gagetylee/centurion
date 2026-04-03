@@ -6,6 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.models.budget import Budget
+from app.db.models.category import Category
 from app.db.models.enums import BudgetPeriod, BudgetType
 from app.db.models.transaction import Transaction
 from app.schemas.budget import BudgetCreate, BudgetUpdate
@@ -68,14 +69,23 @@ class BudgetService:
         self.db.delete(budget)
         self.db.commit()
 
+    def _get_category_ids_with_children(self, category_id: int) -> list[int]:
+        child_ids = [
+            c.id for c in
+            self.db.query(Category.id).filter(Category.parent_id == category_id).all()
+        ]
+        return [category_id] + child_ids
+
     def get_status(self, budget_id: int) -> dict:
         budget = self.get(budget_id)
         period_start, period_end = self._get_period_bounds(budget.period)
 
+        category_ids = self._get_category_ids_with_children(budget.category_id)
+
         spent_cents = self.db.query(
             func.coalesce(func.sum(Transaction.amount_cents), 0)
         ).filter(
-            Transaction.category_id == budget.category_id,
+            Transaction.category_id.in_(category_ids),
             Transaction.date >= period_start,
             Transaction.date <= period_end,
         ).scalar()
