@@ -1,4 +1,4 @@
-# Local AI Finance Tracke
+# Local AI Finance Tracker
 
 A personal finance app that automatically pulls bank transactions via Plaid and categorizes them using a local LLM. All data stays on your machine — no cloud AI APIs, no data sharing.
 
